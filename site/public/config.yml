@@ -1,13 +1,22 @@
 title: "Do July me?"
 yesButtonText: "Yes"
-noButtonText: "No, July you?"
+noButtonText: "No! I like myself! 😎"
 successTitle: "Me too!"
-successSubtitle: "Forever & always ♥"
-maxAttempts: 15
+successSubtitle: "Love you ♥"
+maxAttempts: 3
 theme: "midnight-rose"
+fontSizes:
+  title: "text-5xl md:text-7xl"
+  button: "text-xl md:text-2xl"
+  subtitle: "text-xl md:text-2xl"
+  themeBox: "text-sm"
 particles:
-  count: 120
+  count: 500
   heartScale: 0.5
+  duration: 2
+  velocity: 100
+  effect: -0.75
+  size: 30
   colors:
     "midnight-rose": ["#fda4af", "#fbcfe8", "#f9a8d4", "#fb7185", "#fff1f2"]
     "ocean-breeze": ["#67e8f9", "#a5f3fc", "#cffafe", "#22d3ee", "#e0f2fe"]
