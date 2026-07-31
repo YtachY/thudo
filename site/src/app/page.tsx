@@ -2,9 +2,25 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { load } from "js-yaml";
 import { Heart } from "lucide-react";
 
-const CONFIG = {
+interface SiteConfig {
+  title: string;
+  yesButtonText: string;
+  noButtonText: string;
+  successTitle: string;
+  successSubtitle: string;
+  maxAttempts: number;
+  theme: string;
+  particles: {
+    count: number;
+    heartScale: number;
+    colors: Record<string, string[]>;
+  };
+}
+
+const DEFAULT_CONFIG: SiteConfig = {
   title: "Do July me?",
   yesButtonText: "Yes",
   noButtonText: "No, July you?",
@@ -74,16 +90,46 @@ const THEMES = {
 };
 
 export default function Home() {
-  const [theme, setTheme] = useState<keyof typeof THEMES>(CONFIG.theme as keyof typeof THEMES);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
+  const [configError, setConfigError] = useState(false);
+  const [theme, setTheme] = useState<keyof typeof THEMES>("midnight-rose");
   const [attempts, setAttempts] = useState(0);
   const [noPos, setNoPos] = useState({ x: 0, y: 0 });
   const [success, setSuccess] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/config.yml")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load config");
+        return res.text();
+      })
+      .then((text) => {
+        if (cancelled) return;
+        const parsed = load(text) as Partial<SiteConfig>;
+        const merged = { ...DEFAULT_CONFIG, ...parsed };
+        setConfig(merged as SiteConfig);
+        if (merged.theme && merged.theme in THEMES) {
+          setTheme(merged.theme as keyof typeof THEMES);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConfigError(true);
+          setConfig(DEFAULT_CONFIG);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeConfig = config || DEFAULT_CONFIG;
   const themeData = THEMES[theme];
-  const colors = CONFIG.particles.colors[theme];
-  const maxAttempts = CONFIG.maxAttempts;
+  const colors = activeConfig.particles.colors[theme] || DEFAULT_CONFIG.particles.colors[theme];
+  const maxAttempts = activeConfig.maxAttempts;
   const caught = attempts >= maxAttempts;
 
   const getRandomPosition = useCallback(
@@ -120,6 +166,12 @@ export default function Home() {
     setSuccess(true);
   }, []);
 
+  const reset = useCallback(() => {
+    setSuccess(false);
+    setAttempts(0);
+    setNoPos({ x: 0, y: 0 });
+  }, []);
+
   useEffect(() => {
     if (!success || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -133,9 +185,9 @@ export default function Home() {
 
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    const heartSize = Math.min(window.innerWidth, window.innerHeight) * CONFIG.particles.heartScale;
+    const heartSize = Math.min(window.innerWidth, window.innerHeight) * activeConfig.particles.heartScale;
 
-    const particles = Array.from({ length: CONFIG.particles.count }, () => {
+    const particles = Array.from({ length: activeConfig.particles.count }, () => {
       const t = Math.random() * Math.PI * 2;
       const heartX = 16 * Math.pow(Math.sin(t), 3);
       const heartY = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
@@ -182,7 +234,29 @@ export default function Home() {
     };
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [success, colors]);
+  }, [success, colors, activeConfig.particles.heartScale, activeConfig.particles.count]);
+
+  if (configError) {
+    return (
+      <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-rose-950 to-slate-950">
+        <div className="relative z-10 text-center px-6">
+          <h1 className="font-display text-4xl md:text-6xl text-rose-100 mb-4">Config Error</h1>
+          <p className="text-rose-300/80 font-display">Using default settings. Check config.yml.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!config) {
+    return (
+      <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-rose-950 to-slate-950">
+        <div className="relative z-10 text-center px-6">
+          <div className="w-12 h-12 border-4 border-rose-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-rose-200 font-display text-lg">Loading settings...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -206,7 +280,7 @@ export default function Home() {
           </motion.div>
 
           <h1 className={`font-display text-4xl sm:text-5xl md:text-7xl text-center ${themeData.text}`}>
-            {CONFIG.title}
+            {activeConfig.title}
           </h1>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full justify-center">
@@ -216,7 +290,7 @@ export default function Home() {
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
             >
-              {CONFIG.yesButtonText}
+              {activeConfig.yesButtonText}
             </motion.button>
 
             <motion.button
@@ -227,7 +301,7 @@ export default function Home() {
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className={`w-full sm:w-auto px-8 py-3 rounded-full font-display text-xl md:text-2xl transition-colors ${themeData.buttonNo}`}
             >
-              {CONFIG.noButtonText}
+              {activeConfig.noButtonText}
             </motion.button>
           </div>
 
@@ -265,7 +339,7 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            {CONFIG.successTitle}
+            {activeConfig.successTitle}
           </motion.h1>
 
           <motion.p
@@ -274,8 +348,18 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
-            {CONFIG.successSubtitle}
+            {activeConfig.successSubtitle}
           </motion.p>
+
+          <motion.button
+            onClick={reset}
+            className="mt-4 px-6 py-2 rounded-full bg-white/10 border border-white/20 text-white font-display text-lg hover:bg-white/20 transition-colors"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            Reset
+          </motion.button>
         </motion.div>
       )}
     </main>
