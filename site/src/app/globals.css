@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-display: var(--font-dancing-script);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
