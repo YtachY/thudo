@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { load } from "js-yaml";
 import { Heart } from "lucide-react";
 import { BUILD_CONFIG, type SiteConfig } from "@/lib/config";
 import HeartAnimation from "@/components/HeartAnimation";
@@ -55,14 +56,42 @@ const THEMES = {
 };
 
 export default function Home() {
-  const [config] = useState<SiteConfig>(BUILD_CONFIG);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
+  const [configError, setConfigError] = useState(false);
   const [theme, setTheme] = useState<keyof typeof THEMES>("midnight-rose");
   const [attempts, setAttempts] = useState(0);
   const [noPos, setNoPos] = useState({ x: 0, y: 0 });
   const [success, setSuccess] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const activeConfig = config;
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/config.yml")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load config");
+        return res.text();
+      })
+      .then((text) => {
+        if (cancelled) return;
+        const parsed = load(text) as Partial<SiteConfig>;
+        const merged = { ...BUILD_CONFIG, ...parsed };
+        setConfig(merged as SiteConfig);
+        if (merged.theme && merged.theme in THEMES) {
+          setTheme(merged.theme as keyof typeof THEMES);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConfigError(true);
+          setConfig(BUILD_CONFIG);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeConfig = config || BUILD_CONFIG;
   const themeData = THEMES[theme];
   const colors = activeConfig.particles.colors[theme] || BUILD_CONFIG.particles.colors[theme];
   const maxAttempts = activeConfig.maxAttempts;
@@ -108,6 +137,28 @@ export default function Home() {
     setAttempts(0);
     setNoPos({ x: 0, y: 0 });
   }, []);
+
+  if (configError) {
+    return (
+      <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-rose-950 to-slate-950">
+        <div className="relative z-10 text-center px-6">
+          <h1 className="font-display text-4xl md:text-6xl text-rose-100 mb-4">Config Error</h1>
+          <p className="text-rose-300/80 font-display">Using default settings. Check config.yml.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!config) {
+    return (
+      <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-rose-950 to-slate-950">
+        <div className="relative z-10 text-center px-6">
+          <div className="w-12 h-12 border-4 border-rose-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-rose-200 font-display text-lg">Loading settings...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
