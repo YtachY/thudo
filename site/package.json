@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:config && next build",
+    "build:config": "node ./scripts/build-config.mjs",
     "start": "next start",
     "lint": "eslint"
   },
