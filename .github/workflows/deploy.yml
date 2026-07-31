@@ -33,6 +33,12 @@ jobs:
         working-directory: ./site
         run: npm ci
 
+      - name: Generate production config artifact
+        working-directory: ./site
+        run: |
+          mkdir -p public
+          node -e "const fs=require('fs'); const path=require('path'); const source=path.join(process.cwd(),'public','config.yml'); const target=path.join(process.cwd(),'public','config.build.json'); if (fs.existsSync(source)) { const yaml=require('js-yaml'); const text=fs.readFileSync(source,'utf8'); const data=yaml.load(text); fs.writeFileSync(target, JSON.stringify(data, null, 2)); } else { throw new Error('config.yml not found'); }"
+
       - name: Build for production
         working-directory: ./site
         env:
