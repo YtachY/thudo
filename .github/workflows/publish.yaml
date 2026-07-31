@@ -4,10 +4,18 @@ env:
   WC_HUGO_VERSION: '0.136.5'
 
 on:
-  # Trigger the workflow every time you push to the `main` branch
   push:
     branches: ["main"]
-  # Allows you to run this workflow manually from the Actions tab on GitHub.
+    paths:
+      - "content/**"
+      - "assets/**"
+      - "config/**"
+      - "layouts/**"
+      - "static/**"
+      - "hugo*.yaml"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/publish.yaml"
   workflow_dispatch:
 
 # Provide permission to clone the repo and deploy it to GitHub Pages
@@ -53,6 +61,8 @@ jobs:
         hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
     - name: Generate Pagefind search index
       run: npx pagefind --source "public"
+    - name: Add GitHub Pages compatibility file
+      run: touch ./public/.nojekyll
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:

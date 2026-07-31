@@ -11,11 +11,13 @@ class Point {
     this.y = y;
   }
 
-  clone() {
+  clone(): Point {
     return new Point(this.x, this.y);
   }
 
-  length(length?: number) {
+  length(): number;
+  length(length: number): Point;
+  length(length?: number): number | Point {
     if (typeof length === "undefined") {
       return Math.sqrt(this.x * this.x + this.y * this.y);
     }
@@ -25,7 +27,7 @@ class Point {
     return this;
   }
 
-  normalize() {
+  normalize(): Point {
     const length = this.length();
     this.x /= length;
     this.y /= length;
@@ -179,6 +181,7 @@ export default function HeartAnimation({ colors }: { colors: string[] }) {
     if (!context) return;
 
     function onResize() {
+      if (!canvas) return;
       canvas.width = canvas.clientWidth;
       canvas.height = canvas.clientHeight;
     }
@@ -222,6 +225,7 @@ export default function HeartAnimation({ colors }: { colors: string[] }) {
     let raf = 0;
 
     function render(newTime: number) {
+      if (!context || !canvas) return;
       raf = requestAnimationFrame(render);
       const deltaTime = ((newTime - (time || newTime)) / 1000) as number;
       time = newTime;

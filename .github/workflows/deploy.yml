@@ -3,6 +3,9 @@ name: Deploy Next.js site to GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -34,7 +37,14 @@ jobs:
 
       - name: Build Next.js app
         working-directory: ./site
+        env:
+          NODE_ENV: production
+          GITHUB_ACTIONS: "true"
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: npm run build
+
+      - name: Add GitHub Pages compatibility file
+        run: touch ./site/out/.nojekyll
 
       - name: Setup Pages
         id: pages
